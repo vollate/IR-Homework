@@ -11,7 +11,7 @@ class potential_fields:
     def perpendicular(self, line_obstacle, car_position, coefficient=1):
         res = self.shortest_distance_point(
             line_obstacle[0], line_obstacle[1], car_position)
-        return coefficient*(car_position-res[1])/pow(res[0], 2)
+        return coefficient*(car_position-res[1])/pow(res[0], 3)
 
     def attractive(self, goal_point, car_position, coefficient=1):
         return coefficient*(goal_point-car_position)
@@ -21,9 +21,11 @@ class potential_fields:
 
     def tangential(self, point, car_position, coefficient=1):
         vec = car_position-point
-        perp_vec = np.array([[-vec[1][0]], [vec[0][0]]])
-        unit = perp_vec/np.linalg.norm(perp_vec)
-        return coefficient*unit
+        n_vec = np.array([vec[0][0], vec[1][0], 0])
+        perp = np.array([0, 0, -1])
+        perp_vec = np.cross(n_vec, perp)
+        res = np.array([[perp_vec[0]], [perp_vec[1]]])
+        return coefficient*res
 
     def shortest_distance_point(self, v, w, p):
         # the minimum distance between line segment vw, and point p
