@@ -3,13 +3,15 @@
 
 *Course:Intelligent Robotics (CS401) – Professor: Qi Hao*
 
+[my solution](h1.md)
+
 ### Question 1
 
 The state transition for the action open the door is as shown in the following figure. If the door is closed, the action open the door succeeds in *80%* of all cases. Assume the probabilities of the closed door and open door are *50%* respectively.
 
 <div align=center> <img src=image/f1.bmp/> </div>
 
-**Calculate the probability of:** 
+**Calculate the probability of:**
 
 *P( open | u )* for *u =* "open door".
 
