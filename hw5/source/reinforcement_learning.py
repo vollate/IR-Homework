@@ -180,7 +180,7 @@ class reinforcement_learning:
 
                 # epsilon greedy
                 next_state, reward, _, done = self.grid_map.step(cur_state, cur_action)
-                next_action = self.action_choose_greedy(state_action_value[next_state[0], next_state[1], :])
+                next_action = np.argmax(state_action_value[next_state[0], next_state[1], :])
 
                 ## ----------------------------------------------------------------
                 # You should complement this part to complete the Q value update function (refer to the Pseudocode)
@@ -215,9 +215,9 @@ class reinforcement_learning:
 
                 # epsilon greedy
                 next_state, reward, _, done = self.grid_map.step(cur_state, cur_action)
-                next_action = self.action_choose_greedy(state_action_value[next_state[0], next_state[1], :])
+                next_action = np.argmax(state_action_value[next_state[0], next_state[1], :])
                 reward -= sqrt((next_state[0] - self.grid_map.goal_index[0]) ** 2 + (
-                        next_state[1] - self.grid_map.goal_index[1]) ** 2) / 4000  # use distance to goal
+                        next_state[1] - self.grid_map.goal_index[1]) ** 2) / 5000  # use distance to goal
                 ## ----------------------------------------------------------------
                 # You should complement this part to complete the Q value update function (refer to the Pseudocode)
                 q_old = state_action_value[cur_state[0]][cur_state[1]][cur_action]
