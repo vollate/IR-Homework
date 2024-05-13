@@ -59,17 +59,22 @@ def a_star_search(start, goal, obstacles, grid_size):
 
 # Kalman Filter predict and update functions
 def kalman_filter_predict(state, cov, F, Q):
-'''
-****Complete this function for task2
-'''
-    return 
+    '''
+    Predict the next state and covariance using the process model
+    '''
+    state_pred = F @ state
+    cov_pred = F @ cov @ F.T + Q
+    return state_pred, cov_pred
 
 
 def kalman_filter_update(state_pred, cov_pred, observation, H, R):
-'''
-****Complete this function for task2
-'''
-    return 
+    '''
+    Update the state and covariance estimates using the observation
+    '''
+    K = cov_pred @ H.T @ np.linalg.inv(H @ cov_pred @ H.T + R)
+    state_upd = state_pred + K @ (observation - H @ state_pred)
+    cov_upd = (np.eye(2) - K @ H) @ cov_pred
+    return state_upd, cov_upd
 
 
 # Set up matrices for the Kalman Filter
@@ -113,15 +118,18 @@ for ob in obstacles:
 
 line, = ax.plot([], [], 'go-', lw=2)
 
+
 def init():
     line.set_data([], [])
     return line,
+
 
 def animate(i):
     x = [state[0] for state in states[:i + 1]]
     y = [state[1] for state in states[:i + 1]]
     line.set_data(x, y)
     return line,
+
 
 ani = FuncAnimation(fig, animate, frames=len(states), init_func=init, blit=True, interval=300)
 

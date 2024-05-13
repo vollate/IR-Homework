@@ -71,20 +71,26 @@ def motion_update(particles, move, noise=1.0):
 
 
 def measurement_update(particles, actual_position, sensor_noise=1.0):
-'''
-    """ Update weights based on how close particles are to the actual position. """
-    ****Complete this function for task3
-'''
-    return weights
+    '''
+        """ Update weights based on how close particles are to the actual position. """
+        ****Complete this function for task3
+    '''
+    weights = np.zeros(len(particles))
+    for i, particle in enumerate(particles):
+        distance = np.linalg.norm(particle - actual_position)
+        weights[i] = (1 / (np.sqrt(2 * np.pi * sensor_noise ** 2))) * \
+                     np.exp(-((distance ** 2) / (2 * sensor_noise ** 2)))
+    return weights / sum(weights)
 
 
 def resample(particles, weights):
-'''
-    """ Resample particles based on weights. """
-    ****Complete this function for task3
-'''
-    return 
-
+    '''
+        """ Resample particles based on weights. """
+        ****Complete this function for task3
+    '''
+    indices = np.random.choice(len(particles), size=len(particles), p=weights)
+    resampled_particles = particles[indices]
+    return resampled_particles
 
 # Simulation loop
 path = a_star_search((2, 2), (16, 16), obstacles, grid_size)  # Planned path
