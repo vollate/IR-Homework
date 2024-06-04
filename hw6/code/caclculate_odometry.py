@@ -5,7 +5,7 @@ import csv
 from matplotlib import pyplot as plt
 
 
-def calculate_odometry_velocity(currentPos, velL, velR, deltaT, noise = False, control_std = [0.01, 0.01]):
+def calculate_odometry_velocity(currentPos, velL, velR, deltaT, noise=False, control_std=[0.01, 0.01]):
     """ Calculate odometry based on velocity readings
     Args:
         currentPos (np.mat): current position
@@ -20,19 +20,22 @@ def calculate_odometry_velocity(currentPos, velL, velR, deltaT, noise = False, c
     L = 330.0
 
     if noise == True:
-        V_noise = np.mat([[velR], [velL]]) + np.random.normal([[0], [0]], scale = [[control_std[0]], [control_std[1]]])
+        V_noise = np.mat([[velR], [velL]]) + np.random.normal([[0], [0]], scale=[[control_std[0]], [control_std[1]]])
     else:
         V_noise = np.mat([[velR], [velL]])
 
     V_noise = V_noise * deltaT
     # To do: based on the velocity motion model, please code the matrix A (dimension: 3 x 2) in the following line, then the code in libe 30 can run correctly
-    
+    theta = currentPos[2, 0]
+    A = np.mat([[np.cos(theta) / 2, np.cos(theta) / 2],
+                [np.sin(theta) / 2, np.sin(theta) / 2],
+                [-1 / L, 1 / L]])
     deltaPos = A * V_noise
     currentPos = currentPos + deltaPos
     return currentPos
 
 
-def calculate_odometry_encoders(currentPos, deltaL, deltaR, noise = False, control_std = [0.01, 0.01]):
+def calculate_odometry_encoders(currentPos, deltaL, deltaR, noise=False, control_std=[0.01, 0.01]):
     """Calculate odometry based on encoder readings
     Args:
         currentPos (np.mat): current position
@@ -53,7 +56,11 @@ def calculate_odometry_encoders(currentPos, deltaL, deltaR, noise = False, contr
     else:
         V_noise = V
 
-     # To do: based on the encoer-based motion model, please code the matrix A (dimension: 3 x 2) in the following line
+    # To do: based on the encoer-based motion model, please code the matrix A (dimension: 3 x 2) in the following line
+    theta = currentPos[2, 0]
+    A = np.mat([[np.cos(theta) / 2, np.cos(theta) / 2],
+                [np.sin(theta) / 2, np.sin(theta) / 2],
+                [-1 / L, 1 / L]])
     deltaPos = A * V_noise
     currentPos = currentPos + deltaPos
     return currentPos
@@ -125,10 +132,9 @@ def showPlots():
 
 if __name__ == "__main__":
 
-    _file = 'data/velocity/square_left.csv'#All the .csv files are under the data 
-    
+    _file = 'data/square_left.csv'  # All the .csv files are under the data
+
     # -forward.csv, backward.csv - motion length 1.15m -left_full_turn.csv, right_full_turn.csv - full angle rotation -square_right.csv, square_left.csv - square side length = 1.15m
-    
 
     MIN_INT_16 = -32768
     MAX_INT_16 = 32767
