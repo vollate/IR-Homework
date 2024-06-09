@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 
 import numpy as np
 import csv
@@ -19,18 +20,23 @@ def calculate_odometry_velocity(currentPos, velL, velR, deltaT, noise=False, con
     """
     L = 330.0
 
-    if noise == True:
+    if noise:
         V_noise = np.mat([[velR], [velL]]) + np.random.normal([[0], [0]], scale=[[control_std[0]], [control_std[1]]])
     else:
         V_noise = np.mat([[velR], [velL]])
 
     V_noise = V_noise * deltaT
-    # To do: based on the velocity motion model, please code the matrix A (dimension: 3 x 2) in the following line, then the code in libe 30 can run correctly
+    v = (velR + velL) / 2.0
+    w = (velR - velL) / L
+
     theta = currentPos[2, 0]
-    A = np.mat([[np.cos(theta) / 2, np.cos(theta) / 2],
-                [np.sin(theta) / 2, np.sin(theta) / 2],
-                [-1 / L, 1 / L]])
-    deltaPos = A * V_noise
+    A = np.mat([
+        [np.cos(theta) * deltaT, 0],
+        [np.sin(theta) * deltaT, 0],
+        [0, deltaT]
+    ])
+
+    deltaPos = A * np.mat([[v], [w]])
     currentPos = currentPos + deltaPos
     return currentPos
 
@@ -49,19 +55,19 @@ def calculate_odometry_encoders(currentPos, deltaL, deltaR, noise=False, control
     L = 330.0
     ticksPerRev = 76600
     d = 195
-    V = np.mat([[(deltaR / ticksPerRev) * np.pi * d],
-                [(deltaL / ticksPerRev) * np.pi * d]])
-    if noise == True:
-        V_noise = V + np.random.normal([[0], [0]], scale=[[control_std[0]], [control_std[1]]])
-    else:
-        V_noise = V
+    if noise:
+        deltaL += np.random.normal(0, control_std[0])
+        deltaR += np.random.normal(0, control_std[1])
 
-    # To do: based on the encoer-based motion model, please code the matrix A (dimension: 3 x 2) in the following line
-    theta = currentPos[2, 0]
-    A = np.mat([[np.cos(theta) / 2, np.cos(theta) / 2],
-                [np.sin(theta) / 2, np.sin(theta) / 2],
-                [-1 / L, 1 / L]])
-    deltaPos = A * V_noise
+    delta_s = (deltaR + deltaL) * np.pi * d / (2.0 * ticksPerRev)
+    delta_theta = (deltaR - deltaL) * np.pi * d / (L * ticksPerRev)
+
+    theta = currentPos[2, 0] + delta_theta / 2.0
+
+    delta_x = delta_s * np.cos(theta)
+    delta_y = delta_s * np.sin(theta)
+
+    deltaPos = np.mat([[delta_x], [delta_y], [delta_theta]])
     currentPos = currentPos + deltaPos
     return currentPos
 
@@ -131,51 +137,56 @@ def showPlots():
 
 
 if __name__ == "__main__":
+    file_dir = "../data"
+    for file_name in os.listdir(file_dir):
+        if file_name.endswith('.csv'):
+            _file = os.path.join(file_dir, file_name)
+            # -forward.csv, backward.csv - motion length 1.15m -left_full_turn.csv, right_full_turn.csv - full angle rotation -square_right.csv, square_left.csv - square side length = 1.15m
 
-    _file = 'data/square_left.csv'  # All the .csv files are under the data
+            MIN_INT_16 = -32768
+            MAX_INT_16 = 32767
 
-    # -forward.csv, backward.csv - motion length 1.15m -left_full_turn.csv, right_full_turn.csv - full angle rotation -square_right.csv, square_left.csv - square side length = 1.15m
+            current_pos_vel = np.mat('0;0;0')
+            current_pos_enc = np.mat('0;0;0')
 
-    MIN_INT_16 = -32768
-    MAX_INT_16 = 32767
+            # lists to hold data for print
+            pos_vel_x = []
+            pos_vel_y = []
+            pos_enc_x = []
+            pos_enc_y = []
 
-    current_pos_vel = np.mat('0;0;0')
-    current_pos_enc = np.mat('0;0;0')
+            with open(_file) as csvfile:
+                reader = csv.DictReader(csvfile, delimiter=';', quotechar='|')
+                prev_time = 0
+                prev_enc_l = 0
+                prev_enc_r = 0
+                prev_enc_init = False
 
-    # lists to hold data for print
-    pos_vel_x = []
-    pos_vel_y = []
-    pos_enc_x = []
-    pos_enc_y = []
+                for row in reader:
+                    timestamp = timestamp_to_sec(row['#time'])
+                    current_pos_vel = calculate_odometry_velocity(current_pos_vel, float(row['velL']),
+                                                                  float(row['velR']),
+                                                                  timestamp - prev_time, True, [0.01, 0.01])
+                    pos_vel_x.append(current_pos_vel[0, 0])
+                    pos_vel_y.append(current_pos_vel[1, 0])
+                    prev_time = timestamp
 
-    with open(_file) as csvfile:
-        reader = csv.DictReader(csvfile, delimiter=';', quotechar='|')
-        prev_time = 0
-        prev_enc_l = 0
-        prev_enc_r = 0
-        prev_enc_init = False
+                    if prev_enc_init == False:
+                        prev_enc_l = float(row['posL'])
+                        prev_enc_r = float(row['posR'])
+                        prev_enc_init = True
 
-        for row in reader:
-            timestamp = timestamp_to_sec(row['#time'])
-            current_pos_vel = calculate_odometry_velocity(current_pos_vel, float(row['velL']), float(row['velR']),
-                                                          timestamp - prev_time, True, [0.01, 0.01])
-            pos_vel_x.append(current_pos_vel[0, 0])
-            pos_vel_y.append(current_pos_vel[1, 0])
-            prev_time = timestamp
+                    delta_l, delta__r = calcualte_encoder_shift(row, prev_enc_l, prev_enc_r)
+                    current_pos_enc = calculate_odometry_encoders(current_pos_enc, delta_l, delta__r, True,
+                                                                  [0.01, 0.01])
+                    pos_enc_x.append(current_pos_enc[0, 0])
+                    pos_enc_y.append(current_pos_enc[1, 0])
 
-            if prev_enc_init == False:
-                prev_enc_l = float(row['posL'])
-                prev_enc_r = float(row['posR'])
-                prev_enc_init = True
+                    prev_enc_l = float(row['posL'])
+                    prev_enc_r = float(row['posR'])
 
-            delta_l, delta__r = calcualte_encoder_shift(row, prev_enc_l, prev_enc_r)
-            current_pos_enc = calculate_odometry_encoders(current_pos_enc, delta_l, delta__r, True, [0.01, 0.01])
-            pos_enc_x.append(current_pos_enc[0, 0])
-            pos_enc_y.append(current_pos_enc[1, 0])
-
-            prev_enc_l = float(row['posL'])
-            prev_enc_r = float(row['posR'])
-
-    print_possitions(current_pos_vel, current_pos_enc)
-    plot_both_trajectories("encoders + velocity", pos_vel_x, pos_vel_y, pos_enc_x, pos_enc_y)
+            print_possitions(current_pos_vel, current_pos_enc)
+            plot_both_trajectories(_file + "\nencoders + velocity", pos_vel_x, pos_vel_y, pos_enc_x, pos_enc_y)
+            save_path = '../result/' + os.path.basename(_file) + '.jpg'
+            plt.savefig(save_path)
     showPlots()
